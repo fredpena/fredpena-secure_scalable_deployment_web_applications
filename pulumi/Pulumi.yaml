@@ -1,0 +1,8 @@
+name: pulumi-iac
+description: Pulumi IaC
+runtime: java
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: java
+      jug: Madrid JUG

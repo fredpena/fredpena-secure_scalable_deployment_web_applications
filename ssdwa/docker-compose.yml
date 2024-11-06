@@ -1,0 +1,44 @@
+services:
+  traefik:
+    image: "traefik:v3.2"
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  whoami:
+    image: traefik/whoami
+    container_name: "simple-service"
+    command:
+      # It tells whoami to start listening on 2001 instead of 80
+      - --port=2001
+      - --name=iamfoo
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fredpena-b.rule=Host(`balancer.fredpena.local`)"
+      - "traefik.http.routers.fredpena-b.service=fredpena-b-service"
+      - "traefik.http.routers.fredpena-b.entrypoints=web"
+      - "traefik.http.services.fredpena-b-service.loadbalancer.server.port=2001"
+
+  ssdwa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fredpena.rule=Host(`fredpena.local`)"
+      - "traefik.http.routers.fredpena.service=fredpena-service"
+      - "traefik.http.routers.fredpena.entrypoints=web"
+      - "traefik.http.services.fredpena-service.loadbalancer.server.port=37650"

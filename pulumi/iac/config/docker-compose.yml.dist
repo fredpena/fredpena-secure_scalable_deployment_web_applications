@@ -1,0 +1,66 @@
+version: "3.3"
+
+services:
+  traefik:
+    image: "traefik:v2.8"
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=me@fredpena.dev"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  server:
+    image: cortezaproject/corteza:${VERSION}
+    restart: always
+    env_file: [ .env ]
+    depends_on: [ db ]
+    ports: [ "127.0.0.1:18080:80" ]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.crm.rule=Host(`{{ app_domain }}`)"
+      - "traefik.http.routers.crm.service=crm-service"
+      - "traefik.http.routers.crm.entrypoints=websecure"
+      - "traefik.http.services.crm-service.loadbalancer.server.port=80"
+      - "traefik.http.routers.crm.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.onlyhttps.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.onlyhttps.redirectscheme.permanent=true"
+
+  db:
+    # PostgreSQL Database
+    # See https://hub.docker.com/_/postgres for details
+    image: postgres:13
+      #    networks: [ internal ]
+    restart: always
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U corteza"], interval: 10s, timeout: 5s, retries: 5 }
+    volumes:
+      - "dbdata:/var/lib/postgresql/data"
+    environment:
+      # Warning: these are values that are only used on 1st start
+      #          if you want to change it later, you need to do that
+      #          manually inside db container
+      POSTGRES_USER:     {{ db_user }}
+      POSTGRES_PASSWORD: {{ db_password }}
+
+
+
+# volumes:
+#   data:
+#   db:
+volumes:
+  dbdata:

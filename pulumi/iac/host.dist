@@ -1,0 +1,16 @@
+[defaults]
+fact_caching=jsonfile
+
+[app]
+159.223.182.14
+
+[all:vars]
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_user=root
+
+env=dev
+app_db_name=osticket
+app_db_user=ostiket
+app_db_password=ostiketpw
+
+app_domain=support.alphnology.com
